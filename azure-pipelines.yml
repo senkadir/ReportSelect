@@ -1,0 +1,64 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+  branches:
+    include:
+      - master
+      - test
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  project: '**/JustAcademy.Api.csproj'
+  WebAppName: 'testapijustacademy'
+
+steps:
+- task: DotNetCoreCLI@2
+  displayName: Restore
+  inputs:
+    command: restore
+    projects: $(Project)
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    projects: $(Project)
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
+    workingDirectory: src/JustAcademy.Api
+
+- task: DotNetCoreCLI@2
+  displayName: Test
+  inputs:
+    command: test
+    projects: '**/*[Tt]ests/*.csproj'
+    arguments: '--configuration $(BuildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: Publish
+  inputs:
+    command: publish
+    publishWebProjects: false
+    projects: $(Project)
+    arguments: '-c $(BuildConfiguration) -o $(Build.StagingDirectory)  --no-build'
+    workingDirectory: src/JustAcademy.Api
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+    ArtifactName: '$(Build.BuildNumber)'
+  condition: succeededOrFailed()
+
+- task: AzureRmWebAppDeployment@4
+  displayName: 'Deploy Azure App Service'
+  inputs:
+    azureSubscription: 'Neyasis Development (07973c8c-eecf-468b-bd69-823fd1d9ed2d)'
+    WebAppName: $(WebAppName)
+    packageForLinux: '$(Build.ArtifactStagingDirectory)/**/*.zip'

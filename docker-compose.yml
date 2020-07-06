@@ -1,0 +1,61 @@
+version: "3.5"
+
+services:    
+  ##41102 - db
+  reportselect.db:
+    image: postgres:11.4
+    ports:
+      - "41102:5432"
+    restart: always
+    volumes:
+      - db_volume:/var/lib/postgres/data
+    environment:
+      POSTGRES_USER: "sqladmin"
+      POSTGRES_PASSWORD: "sqladmin"
+      POSTGRES_DB: "dockerdatabase"
+    container_name: reportselect.db
+    networks: 
+      - reportselect
+
+  ##41103 - db-pgadmin
+  reportselect.dbpgadmin:
+    image: dpage/pgadmin4:4.15
+    ports:
+      - "41103:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "sqladmin@sqladmin"
+      PGADMIN_DEFAULT_PASSWORD: "password"
+    container_name: reportselect.dbpgadmin
+    volumes:
+      - db_volume:/var/lib/pgadmin
+    networks: 
+      - reportselect
+  
+
+  ##41100 - api
+  reportselect.api:
+    image: reportselect/reportselect.api
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    container_name: reportselect.api
+    ports:
+      - '41100:5000'
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+    networks:
+      - reportselect
+    restart:
+      on-failure
+    depends_on: 
+      - reportselect.db
+
+  ##45101 - web
+
+networks:
+  reportselect:
+    name: reportselect
+
+volumes:
+  db_volume:
+  
